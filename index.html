@@ -1,47 +1,14 @@
 <!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<title>Firestoreテスト</title>
-<style>
-body{
-    font-family: monospace;
-    background:#111;
-    color:#0f0;
-}
-#log{
-    white-space:pre-wrap;
-    border:1px solid #444;
-    padding:10px;
-}
-</style>
-</head>
+<html>
 <body>
-
-<h2>Firestore接続テスト</h2>
-<div id="log">start...</div>
+<pre id="log"></pre>
 
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const logEl = document.getElementById("log");
-
-function log(msg){
-    console.log(msg);
-    logEl.textContent += "\n" + msg;
-}
-
-function logError(e){
-    console.error(e);
-
-    log("\n===== ERROR =====");
-    log("message: " + e.message);
-    log("code: " + (e.code || "none"));
-    log("name: " + (e.name || "none"));
-    log("stack:\n" + e.stack);
-}
+const log = t => document.getElementById("log").textContent += t + "\n";
 
 const firebaseConfig = {
  apiKey: "AIzaSyAuSr-KgBjfvp-yroLH2X0tujZaUenFVsY",
@@ -52,46 +19,38 @@ const firebaseConfig = {
  appId: "1:899371812603:web:ced1901f7a3abb5e0e125e"
 };
 
-try{
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-    log("Firebase initialize...");
+const guesses = [
+"users","user","messages","chat","posts","data","items",
+"logs","config","settings","admin","list","rooms","comments"
+];
 
-    const app = initializeApp(firebaseConfig);
-    log("App initialized");
+async function scan(){
 
-    const db = getFirestore(app);
-    log("Firestore connected");
+for(const name of guesses){
 
-    async function load(){
+    try{
+        log("checking: " + name);
 
-        try{
+        const snap = await getDocs(collection(db,name));
 
-            log("Reading collection: test");
-
-            const snapshot = await getDocs(collection(db,"test"));
-
-            log("Documents found: " + snapshot.size);
-
-            snapshot.forEach(doc=>{
-                log("doc id: " + doc.id);
-                log("data: " + JSON.stringify(doc.data()));
-            });
-
-            if(snapshot.size===0){
-                log("No documents.");
-            }
-
-        }catch(e){
-            logError(e);
+        if(snap.size > 0){
+            log("FOUND: " + name + " ("+snap.size+" docs)");
+        }else{
+            log("exists but empty: " + name);
         }
 
+    }catch(e){
+        log("blocked: " + name + " -> " + e.code);
     }
 
-    load();
-
-}catch(e){
-    logError(e);
 }
+
+}
+
+scan();
 
 </script>
 
