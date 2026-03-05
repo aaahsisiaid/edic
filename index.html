@@ -1,7 +1,7 @@
 <html lang="ja"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ログイン - 理社講座マイページ</title>
+    <title>セキュリティテスト</title>
     <style>
         body { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); font-family: sans-serif; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
         .login-container { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: 100%; max-width: 350px; text-align: center; }
@@ -14,7 +14,7 @@
 </head>
 <body>
     <div class="login-container">
-        <h1>理社講座受講生ログイン</h1>
+        <h1>セキュリティテスト</h1>
         <p style="font-size:14px; color:#666; margin-bottom:30px;">会員番号とパスワードを入力してください</p>
         <input type="text" id="memberId" placeholder="会員番号　8桁" inputmode="numeric">
         <input type="password" id="password" placeholder="パスワード">
@@ -31,7 +31,7 @@
         const auth = getAuth(app);
         const functions = getFunctions(app, "us-central1");
 
-    document.getElementById("loginBtn").onclick = async () => {
+        document.getElementById("loginBtn").onclick = async () => {
             const inputId = document.getElementById("memberId").value.trim();
             const inputPw = document.getElementById("password").value.trim();
 
@@ -42,10 +42,8 @@
             btn.innerText = "ログイン中...";
 
             try {
-                // Firebase認証
                 await signInWithEmailAndPassword(auth, `${inputId}@your-school-member.com`, inputPw);
                 
-                // サーバー通信（確実に memberId という名前で送る）
                 const checkLogin = httpsCallable(functions, 'checkLogin');
                 const result = await checkLogin({ memberId: inputId });
                 const d = result.data;
@@ -71,5 +69,4 @@
             }
         };
     </script>
-
-<div popover="manual" style="z-index: 2147483647 !important; padding: 0px !important; margin: 0px !important; border-radius: 8px !important; position: fixed !important; color-scheme: normal !important; box-shadow: rgba(0, 0, 0, 0.15) 0px 2px 4px 0px, rgba(0, 0, 0, 0.18) 0px 8px 15px 6px !important; border: 1px solid rgba(0, 0, 0, 0.9) !important; overflow: hidden !important; backdrop-filter: blur(20px) !important; background-color: rgba(35, 35, 35, 0.83) !important; top: 470px !important; left: 560px !important; opacity: 0 !important; visibility: hidden !important;"></div></body></html>
+</body></html>
