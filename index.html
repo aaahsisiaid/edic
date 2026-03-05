@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>firebaseConfig取得</title>
+</head>
+<body>
+
+<h2>Firebase Config</h2>
+<pre id="out"></pre>
+
+<script>
+const firebaseConfig = {
+ apiKey: "AIzaSyAuSr-KgBjfvp-yroLH2X0tujZaUenFVsY",
+ authDomain: "boxwood-spot-486909-j1.firebaseapp.com",
+ projectId: "boxwood-spot-486909-j1",
+ storageBucket: "boxwood-spot-486909-j1.firebasestorage.app",
+ messagingSenderId: "899371812603",
+ appId: "1:899371812603:web:ced1901f7a3abb5e0e125e"
+};
+
+// 全部取得
+let text = "";
+
+for (const key in firebaseConfig) {
+    text += key + " : " + firebaseConfig[key] + "\n";
+}
+
+document.getElementById("out").textContent = text;
+</script>
+
+</body>
+</html>
