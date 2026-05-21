@@ -216,25 +216,6 @@ async function run() {
 
 }
 
-// =======================
-// ボタン
-// =======================
-
-window.startSearch = () => {
-
-  if (running) return;
-
-  running = true;
-
-  run();
-};
-
-window.stopSearch = () => {
-
-  running = false;
-
-  log("停止要求");
-};
   // =======================
 // 成功結果保存配列
 // =======================
@@ -380,5 +361,25 @@ async function run() {
   }
 
 }
+
+// =======================
+// ボタン
+// =======================
+
+window.startSearch = () => {
+
+  if (running) return;
+
+  running = true;
+
+  run();
+};
+
+window.stopSearch = () => {
+
+  running = false;
+
+  log("停止要求");
+};
 
 </script>
